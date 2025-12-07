@@ -1,7 +1,7 @@
 name: Scheduled Jobs
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *" # Runs every 5 minutes
 
@@ -9,7 +9,6 @@ jobs:
   attempt_booking:
     name: Attempt Booking
     runs-on: ubuntu-latest
-    # REMOVED: "environment: sushi" (This prevents errors if the env doesn't exist)
     
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +19,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # This creates the file your bot reads
+      # This takes your Flat JSON secret and saves it to the file the bot expects
       - run: echo '${{ secrets.CYPRESS_ENV }}' > cypress.env.json
 
       - run: npm ci
