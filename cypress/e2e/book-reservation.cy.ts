@@ -113,21 +113,18 @@ describe('book reservation', () => {
 		const redirect = encodeURIComponent(`${reservation.bookingPage}?size=${reservation.partySize}`)
 		// REPLACE THE OLD cy.visit LINE WITH THIS BLOCK:
 	    cy.visit(Cypress.env('bookingPage'), {
-	      failOnStatusCode: false, // 1. Don't crash on 403 errors
-	      retryOnStatusCodeFailure: true,
+	      failOnStatusCode: false, // We ONLY keep this one. It forces the bot to continue even if Tock sends a 403.
 	      headers: {
-	        // 2. Force the User Agent again (double safety)
 	        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 	      },
 	      onBeforeLoad(win) {
-	        // 3. The "Magic Trick": Delete the flag that says "I am a robot"
 	        Object.defineProperty(win.navigator, 'webdriver', {
 	          get: () => false,
 	        });
 	      }
 	    });
 	    
-	    // Add a small wait to let Cloudflare/Tock think you are human
+	    // Allow time for the "Just a moment" screen to resolve
 	    cy.wait(5000);
 	}
 
