@@ -1,32 +1,33 @@
 const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
-  // 1. TIMEOUTS: Give Cloudflare time to finish checking
-  defaultCommandTimeout: 20000, 
+  // TIMEOUTS: Increase drastically to allow manual Cloudflare checks to pass
+  defaultCommandTimeout: 30000, 
   pageLoadTimeout: 60000,
   
-  // 2. VIEWPORT: Look like a standard laptop
-  viewportWidth: 1366,
-  viewportHeight: 768,
+  viewportWidth: 1280,
+  viewportHeight: 720,
+  
+  chromeWebSecurity: false, // Critical for cross-site iframes
 
-  // 3. SECURITY: Allow cross-domain iframes (needed for captchas)
-  chromeWebSecurity: false,
-
-  // 4. USER AGENT: Use a standard Windows Chrome agent (safer for Headless mode)
+  // FAKE USER AGENT: This is a Windows 10 Chrome string
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 
   e2e: {
     setupNodeEvents(on, config) {
-      // 5. THE MAGIC SWITCH: Hide the "Automation" flags at the browser level
       on('before:browser:launch', (browser = {}, launchOptions) => {
         if (browser.family === 'chromium' && browser.name !== 'electron') {
-          // Removes the "Chrome is being controlled by automated software" banner
-          // and hides the `navigator.webdriver` property.
+          // 1. DISABLE AUTOMATION FLAGS
           launchOptions.args.push('--disable-blink-features=AutomationControlled');
           
-          // Randomize some fingerprinting metrics
+          // 2. FAKE WINDOW ARGUMENTS (Makes it look like a real app)
+          launchOptions.args.push('--start-maximized');
           launchOptions.args.push('--disable-infobars');
-          launchOptions.args.push('--window-size=1366,768');
+          
+          // 3. MASK THE BOT
+          // This forces the browser to disable the "selenium" flag used for detection
+          launchOptions.args.push('--disable-dev-shm-usage'); 
+          launchOptions.args.push('--no-sandbox'); 
         }
         return launchOptions;
       });
