@@ -15,15 +15,13 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version-file: .node-version
+          node-version: 18  # FORCE v18 (safer than reading the .node-version file)
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # This takes your Flat JSON secret and saves it to the file the bot expects
+      # Create the secret file from your CYPRESS_ENV
       - run: echo '${{ secrets.CYPRESS_ENV }}' > cypress.env.json
 
       - run: npm ci
 
       - run: npm test
-
-      - uses: gautamkrishnar/keepalive-workflow@v1
