@@ -102,36 +102,49 @@ describe('book reservation', () => {
 	}
 
 	function authenticate() {
-	  // 1. LOG THE TITLE (Helps us debug)
-	  cy.title().then((title) => {
-	    cy.log('PAGE TITLE: ' + title);
-	  });
+	  cy.log('🔍 Checking for Cloudflare or Login...');
 	
-	  // 2. WAIT FOR POTENTIAL CLOUDFLARE "VERIFY" CHECK
-	  // We wait 10 seconds blindly to let the "Just a moment..." screen vanish
-	  cy.wait(10000);
+	  // 1. WAIT for the page to settle (gives Cloudflare time to appear)
+	  cy.wait(5000);
 	
-	  // 3. CHECK IF WE ARE BLOCKED
+	  // 2. ATTEMPT TO CLICK CLOUDFLARE CHECKBOX
+	  // We look for the iframe that holds the "Verify you are human" button
 	  cy.get('body').then(($body) => {
-	    // If we see "Verify you are human" or "Access denied", we fail with a clear message
-	    if ($body.text().includes('Verify you are human') || $body.text().includes('Access denied')) {
-	      cy.screenshot('blocked-by-cloudflare'); // Take a manual picture
-	      throw new Error('🔴 BLOCKED BY CLOUDFLARE.');
+	    if ($body.find('iframe[src*="turnstile"]').length > 0) {
+	      cy.log('⚠️ Cloudflare detected. Attempting to click...');
+	      
+	      // We target the iframe by its source or title
+	      cy.get('iframe[src*="turnstile"]').then(($iframe) => {
+	        // We can't always see inside cross-origin iframes, but if chromeWebSecurity is false, we might.
+	        // If this fails, we rely on the "Stealth Mode" to pass it automatically.
+	        const $body = $iframe.contents().find('body');
+	        cy.wrap($body).find('input[type="checkbox"]').click({ force: true });
+	        cy.wait(3000); // Wait for verification
+	      });
 	    }
 	  });
 	
-	  // 4. TRY TO FIND THE EMAIL INPUT
-	  // We use 'body' to find it conditionally so we can log a better error
+	  // 3. CHECK IF WE ARE STILL BLOCKED
+	  cy.get('body').then(($body) => {
+	    if ($body.text().includes('Verify you are human')) {
+	      cy.screenshot('blocked-by-cloudflare-final');
+	      throw new Error('🔴 STILL BLOCKED: The bot could not bypass the Cloudflare check.');
+	    }
+	  });
+	
+	  // 4. ENTER EMAIL (Login Flow)
+	  // We use a generic check because Tock changes IDs often
 	  cy.get('body').then(($body) => {
 	    if ($body.find('input[type="email"]').length > 0) {
 	      cy.get('input[type="email"]').type(Cypress.env('email'));
 	    } else {
-	      cy.screenshot('missing-email-input');
-	      throw new Error('Could not find email input. The page loaded is likely not the login page.');
+	      // If we are here, we are likely on the wrong page or blocked
+	      cy.screenshot('debug-missing-email');
+	      throw new Error('Could not find email input. See screenshot "debug-missing-email" in Artifacts.');
 	    }
 	  });
 	
-	  // 5. CONTINUE LOGIN
+	  // 5. CONTINUE & PASSWORD
 	  cy.get('body').then(($body) => {
 	    if ($body.find('button:contains("Continue")').length > 0) {
 	      cy.contains('button', 'Continue').click();
@@ -141,7 +154,7 @@ describe('book reservation', () => {
 	
 	  cy.get('input[type="password"]', { timeout: 10000 }).type(Cypress.env('password'));
 	  cy.get('button[type="submit"], button:contains("Log in")').first().click();
-	  cy.wait(3000);
+	  cy.wait(5000);
 	}
 
 	function visit() {
