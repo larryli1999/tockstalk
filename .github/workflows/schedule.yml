@@ -1,38 +1,30 @@
 name: Scheduled Jobs
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'the config to use for the Cypress environment'
-        required: false
-        default: 'sushi'
+  workflow_dispatch: # Allows manual triggering
   schedule:
-    - cron: "*/5 * * * *" # UPDATED: Runs every 5 minutes
+    - cron: "*/5 * * * *" # Runs every 5 minutes
 
 jobs:
   attempt_booking:
     name: Attempt Booking
     runs-on: ubuntu-latest
-    # UPDATED: Ensure this matches the config name in your cypress.env.json
-    environment: ${{ github.event.inputs.environment || 'sushi' }} 
+    # REMOVED: "environment: sushi" (This prevents errors if the env doesn't exist)
     
     steps:
       - uses: actions/checkout@v3
-      
-      # REMOVED: The "last-workflow-status" check is removed so it tries 
-      # every single time, regardless of previous results.
 
       - uses: actions/setup-node@v3
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: package-lock.json
-          
+
+      # This creates the file your bot reads
       - run: echo '${{ secrets.CYPRESS_ENV }}' > cypress.env.json
-      
+
       - run: npm ci
-      
+
       - run: npm test
-        
+
       - uses: gautamkrishnar/keepalive-workflow@v1
