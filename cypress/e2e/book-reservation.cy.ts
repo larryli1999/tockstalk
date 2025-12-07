@@ -102,27 +102,36 @@ describe('book reservation', () => {
 	}
 
 	function authenticate() {
-	  // 1. DEBUG: Log the page title to see if we are blocked by Cloudflare
+	  // 1. LOG THE TITLE (Helps us debug)
 	  cy.title().then((title) => {
-	    cy.log('---------------------------------------------------');
-	    cy.log('CURRENT PAGE TITLE: ' + title);
-	    cy.log('---------------------------------------------------');
+	    cy.log('PAGE TITLE: ' + title);
 	  });
 	
-	  // 2. CHECK FOR CLOUDFLARE/CAPTCHA
+	  // 2. WAIT FOR POTENTIAL CLOUDFLARE "VERIFY" CHECK
+	  // We wait 10 seconds blindly to let the "Just a moment..." screen vanish
+	  cy.wait(10000);
+	
+	  // 3. CHECK IF WE ARE BLOCKED
 	  cy.get('body').then(($body) => {
+	    // If we see "Verify you are human" or "Access denied", we fail with a clear message
 	    if ($body.text().includes('Verify you are human') || $body.text().includes('Access denied')) {
-	      cy.log('🔴 BLOCKED BY CLOUDFLARE DETECTED');
-	      throw new Error('Blocked by Cloudflare - The bot needs a better disguise.');
+	      cy.screenshot('blocked-by-cloudflare'); // Take a manual picture
+	      throw new Error('🔴 BLOCKED BY CLOUDFLARE.');
 	    }
 	  });
 	
-	  // 3. ENTER EMAIL (Using a more generic selector)
-	  cy.get('input[type="email"]', { timeout: 10000 })
-	    .should('be.visible')
-	    .type(Cypress.env('email'));
+	  // 4. TRY TO FIND THE EMAIL INPUT
+	  // We use 'body' to find it conditionally so we can log a better error
+	  cy.get('body').then(($body) => {
+	    if ($body.find('input[type="email"]').length > 0) {
+	      cy.get('input[type="email"]').type(Cypress.env('email'));
+	    } else {
+	      cy.screenshot('missing-email-input');
+	      throw new Error('Could not find email input. The page loaded is likely not the login page.');
+	    }
+	  });
 	
-	  // 4. HANDLE "NEXT" BUTTON (If Tock has a two-step login)
+	  // 5. CONTINUE LOGIN
 	  cy.get('body').then(($body) => {
 	    if ($body.find('button:contains("Continue")').length > 0) {
 	      cy.contains('button', 'Continue').click();
@@ -130,18 +139,8 @@ describe('book reservation', () => {
 	    }
 	  });
 	
-	  // 5. ENTER PASSWORD
-	  cy.get('input[type="password"]', { timeout: 10000 })
-	    .should('be.visible')
-	    .type(Cypress.env('password'));
-	
-	  // 6. CLICK LOGIN
-	  // Try multiple common login button selectors
-	  cy.get('button[type="submit"], button:contains("Log in"), [data-testid="login-button"]')
-	    .first()
-	    .click();
-	
-	  // Wait for login to complete
+	  cy.get('input[type="password"]', { timeout: 10000 }).type(Cypress.env('password'));
+	  cy.get('button[type="submit"], button:contains("Log in")').first().click();
 	  cy.wait(3000);
 	}
 
