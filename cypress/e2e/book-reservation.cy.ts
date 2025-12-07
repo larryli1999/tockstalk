@@ -102,11 +102,47 @@ describe('book reservation', () => {
 	}
 
 	function authenticate() {
-		cy.log(':house: navigating to booking page...')
-		cy.get(tid('email-input')).type(patron.email)
-		cy.get(tid('password-input')).type(patron.password)
-		cy.log(':unlock: logging in...')
-		cy.get(tid('signin')).click()
+	  // 1. DEBUG: Log the page title to see if we are blocked by Cloudflare
+	  cy.title().then((title) => {
+	    cy.log('---------------------------------------------------');
+	    cy.log('CURRENT PAGE TITLE: ' + title);
+	    cy.log('---------------------------------------------------');
+	  });
+	
+	  // 2. CHECK FOR CLOUDFLARE/CAPTCHA
+	  cy.get('body').then(($body) => {
+	    if ($body.text().includes('Verify you are human') || $body.text().includes('Access denied')) {
+	      cy.log('🔴 BLOCKED BY CLOUDFLARE DETECTED');
+	      throw new Error('Blocked by Cloudflare - The bot needs a better disguise.');
+	    }
+	  });
+	
+	  // 3. ENTER EMAIL (Using a more generic selector)
+	  cy.get('input[type="email"]', { timeout: 10000 })
+	    .should('be.visible')
+	    .type(Cypress.env('email'));
+	
+	  // 4. HANDLE "NEXT" BUTTON (If Tock has a two-step login)
+	  cy.get('body').then(($body) => {
+	    if ($body.find('button:contains("Continue")').length > 0) {
+	      cy.contains('button', 'Continue').click();
+	      cy.wait(1000);
+	    }
+	  });
+	
+	  // 5. ENTER PASSWORD
+	  cy.get('input[type="password"]', { timeout: 10000 })
+	    .should('be.visible')
+	    .type(Cypress.env('password'));
+	
+	  // 6. CLICK LOGIN
+	  // Try multiple common login button selectors
+	  cy.get('button[type="submit"], button:contains("Log in"), [data-testid="login-button"]')
+	    .first()
+	    .click();
+	
+	  // Wait for login to complete
+	  cy.wait(3000);
 	}
 
 	function visit() {
