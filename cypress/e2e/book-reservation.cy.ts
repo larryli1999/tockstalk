@@ -112,7 +112,7 @@ describe('book reservation', () => {
 	function visit() {
 		const redirect = encodeURIComponent(`${reservation.bookingPage}?size=${reservation.partySize}`)
 		// REPLACE THE OLD cy.visit LINE WITH THIS BLOCK:
-	    cy.visit(bookingPage, {
+	    cy.visit(Cypress.env('bookingPage'), {
 	      failOnStatusCode: false, // 1. Don't crash on 403 errors
 	      retryOnStatusCodeFailure: true,
 	      headers: {
